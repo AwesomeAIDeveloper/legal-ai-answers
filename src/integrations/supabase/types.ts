@@ -9,7 +9,128 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      legal_queries: {
+        Row: {
+          ai_detailed_advice: string | null
+          ai_summary: string | null
+          created_at: string
+          id: string
+          is_paid: boolean
+          legal_letter_url: string | null
+          payment_id: string | null
+          query_document_url: string | null
+          query_text: string
+          topic_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          ai_detailed_advice?: string | null
+          ai_summary?: string | null
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          legal_letter_url?: string | null
+          payment_id?: string | null
+          query_document_url?: string | null
+          query_text: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          ai_detailed_advice?: string | null
+          ai_summary?: string | null
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          legal_letter_url?: string | null
+          payment_id?: string | null
+          query_document_url?: string | null
+          query_text?: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_queries_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "legal_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_topics: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          prompt_template: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          prompt_template: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          prompt_template?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          is_admin: boolean
+          is_subscribed: boolean
+          last_name: string | null
+          subscription_ends_at: string | null
+          subscription_tier: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id: string
+          is_admin?: boolean
+          is_subscribed?: boolean
+          last_name?: string | null
+          subscription_ends_at?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          is_admin?: boolean
+          is_subscribed?: boolean
+          last_name?: string | null
+          subscription_ends_at?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

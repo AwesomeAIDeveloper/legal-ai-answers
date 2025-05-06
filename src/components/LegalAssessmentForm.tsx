@@ -90,6 +90,7 @@ const LegalAssessmentForm = () => {
       return;
     }
 
+    // Fix: Use the window interface properly for Speech Recognition
     const SpeechRecognition = window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';

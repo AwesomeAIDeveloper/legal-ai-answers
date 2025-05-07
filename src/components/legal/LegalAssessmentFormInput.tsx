@@ -3,70 +3,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Mic, Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { LegalTopic } from "@/types";
-
-// TypeScript interface for the Web Speech Recognition API
-interface SpeechRecognitionEvent extends Event {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionResultList {
-  length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  length: number;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-  isFinal?: boolean;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognition extends EventTarget {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onaudiostart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onsoundstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onspeechstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onspeechend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onsoundend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onaudioend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
-  onnomatch: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
-
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognition;
-  prototype: SpeechRecognition;
-}
-
-// Extend the Window interface to include webkitSpeechRecognition
-declare global {
-  interface Window {
-    webkitSpeechRecognition: SpeechRecognitionConstructor;
-  }
-}
 
 const formSchema = z.object({
   topicId: z.string().optional(),
@@ -80,7 +23,6 @@ interface LegalAssessmentFormInputProps {
 
 const LegalAssessmentFormInput = ({ topics, onSubmit }: LegalAssessmentFormInputProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -89,51 +31,6 @@ const LegalAssessmentFormInput = ({ topics, onSubmit }: LegalAssessmentFormInput
       queryText: "",
     },
   });
-
-  const handleVoiceInput = () => {
-    if (!('webkitSpeechRecognition' in window)) {
-      toast.error("Voice input is not supported in your browser.");
-      return;
-    }
-
-    // Now TypeScript knows what webkitSpeechRecognition is
-    const SpeechRecognition = window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onstart = () => {
-      setIsRecording(true);
-      toast.info("Voice recording started. Speak clearly into your microphone.");
-    };
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = Array.from(event.results)
-        .map(result => result[0])
-        .map(result => result.transcript)
-        .join('');
-      
-      form.setValue('queryText', transcript);
-    };
-
-    recognition.onerror = (event) => {
-      console.error('Speech recognition error', event);
-      toast.error("Error recording voice. Please try again.");
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-      toast.success("Voice recording finished.");
-    };
-
-    if (isRecording) {
-      recognition.stop();
-    } else {
-      recognition.start();
-    }
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -221,15 +118,6 @@ const LegalAssessmentFormInput = ({ topics, onSubmit }: LegalAssessmentFormInput
             <FormItem>
               <FormLabel>Describe your legal issue</FormLabel>
               <div className="flex space-x-2 mb-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className={isRecording ? "bg-red-100" : ""}
-                  onClick={handleVoiceInput}
-                >
-                  <Mic className={isRecording ? "text-red-500" : ""} />
-                </Button>
                 <Button
                   type="button"
                   variant="outline"

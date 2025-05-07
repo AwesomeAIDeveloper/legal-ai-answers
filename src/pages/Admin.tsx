@@ -1,14 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LegalTopic, UserProfile } from "@/types";
@@ -25,38 +20,50 @@ const Admin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [editingTopic, setEditingTopic] = useState<LegalTopic | null>(null);
 
-  // Check if user is authenticated and is admin
-  useEffect(() => {
-    const checkUser = async () => {
+  // Memoized check user function
+  const checkUser = useCallback(async () => {
+    try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
         toast.error("Please log in to access the admin panel");
         navigate("/auth");
-        return;
+        return false;
       }
       
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', session.user.id)
         .single();
       
-      if (!data || !data.is_admin) {
+      if (error || !data || !data.is_admin) {
         toast.error("You don't have permission to access the admin panel");
         navigate("/");
-        return;
+        return false;
       }
       
       setUser(data as UserProfile);
       setIsAdmin(true);
-    };
-    
-    checkUser();
+      return true;
+    } catch (error) {
+      toast.error("An error occurred while checking permissions");
+      navigate("/");
+      return false;
+    }
   }, [navigate]);
 
-  // Fetch legal topics
-  const { data: topics, isLoading: isLoadingTopics, refetch: refetchTopics } = useQuery({
+  // Effect for auth check
+  useEffect(() => {
+    checkUser();
+  }, [checkUser]);
+
+  // Fetch legal topics with caching and error handling
+  const { 
+    data: topics, 
+    isLoading: isLoadingTopics, 
+    refetch: refetchTopics 
+  } = useQuery({
     queryKey: ['adminLegalTopics'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -68,10 +75,15 @@ const Admin = () => {
       return data as LegalTopic[];
     },
     enabled: isAdmin,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchOnWindowFocus: false,
   });
 
-  // Fetch users
-  const { data: users, isLoading: isLoadingUsers } = useQuery({
+  // Fetch users with caching and optimization
+  const { 
+    data: users, 
+    isLoading: isLoadingUsers 
+  } = useQuery({
     queryKey: ['adminUsers'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -83,13 +95,16 @@ const Admin = () => {
       return data as UserProfile[];
     },
     enabled: isAdmin,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchOnWindowFocus: false,
   });
 
-  const handleEditTopic = (topic: LegalTopic) => {
+  // Memoized event handlers
+  const handleEditTopic = useCallback((topic: LegalTopic) => {
     setEditingTopic(topic);
-  };
+  }, []);
 
-  const handleDeleteTopic = async (id: string) => {
+  const handleDeleteTopic = useCallback(async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this topic? This action cannot be undone.")) {
       return;
     }
@@ -111,8 +126,14 @@ const Admin = () => {
     } catch (error: any) {
       toast.error(error.message || "Failed to delete legal topic");
     }
-  };
+  }, [editingTopic, refetchTopics]);
 
+  const handleTopicSuccess = useCallback(() => {
+    refetchTopics();
+    setEditingTopic(null);
+  }, [refetchTopics]);
+
+  // Loading state component
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -124,6 +145,9 @@ const Admin = () => {
       </div>
     );
   }
+
+  // Memoized sorted topics list
+  const memoizedTopics = useMemo(() => topics || [], [topics]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -148,7 +172,7 @@ const Admin = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
                 <AdminTopicsList 
-                  topics={topics || []}
+                  topics={memoizedTopics}
                   isLoading={isLoadingTopics}
                   onEdit={handleEditTopic}
                   onDelete={handleDeleteTopic}
@@ -158,10 +182,7 @@ const Admin = () => {
               <div>
                 <AdminTopicForm 
                   editingTopic={editingTopic} 
-                  onSuccess={() => {
-                    refetchTopics();
-                    setEditingTopic(null);
-                  }}
+                  onSuccess={handleTopicSuccess}
                 />
               </div>
             </div>
